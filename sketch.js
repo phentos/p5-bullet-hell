@@ -8,6 +8,9 @@ let shotMode = drawBeam;
 const record = false;
 let recording = false;
 
+let osc;
+let playing = false;
+
 function setup() {
 	createCanvas(600, 300);
 
@@ -15,6 +18,35 @@ function setup() {
 	gunX = 50;
 	gunY = height / 2;
 	this.focus();
+}
+
+function activateSound() {
+	if (!osc) {
+		osc = new p5.Oscillator("triangle");
+		osc.amp(0);
+		osc.start();
+	}
+}
+
+function stopSound() {
+	if (osc) {
+		osc.stop();
+		playing = false;
+	}
+}
+
+function pewPew() {
+	playing = true;
+
+	osc.amp(0.5, 0.01);
+
+	osc.freq(800, 0.0);
+	osc.freq(300, 0.2);
+
+	setTimeout(() => {
+		osc.amp(0, 0.2);
+		playing = false;
+	}, 200);
 }
 
 function draw() {
@@ -35,6 +67,7 @@ function drawShots() {
 
 		if (shot.x > width) {
 			shots.shift();
+
 			continue;
 		}
 
@@ -91,6 +124,8 @@ function keyPressed() {
 
 	// spacebar
 	if (keyIsDown(32)) {
+		activateSound();
+
 		if (!recording & record) {
 			recording = true;
 			saveGif("pewpew", 3);
@@ -106,6 +141,7 @@ function enforceBarriers() {
 
 function shoot() {
 	shots.push(new Shot({ x: gunX, y: gunY }));
+	pewPew();
 }
 
 class Shot {
