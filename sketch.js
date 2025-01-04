@@ -11,6 +11,10 @@ let recording = false;
 let osc;
 let playing = false;
 
+let desperation = 0;
+const desperationRate = 1.3;
+const desperationRecovery = 1.1;
+
 function setup() {
 	createCanvas(600, 300);
 
@@ -18,6 +22,11 @@ function setup() {
 	gunX = 50;
 	gunY = height / 2;
 	this.focus();
+}
+
+function doAudio() {
+	let intensity = min(desperation / (5 * desperationRate), 1);
+	osc.amp(intensity);
 }
 
 function activateSound() {
@@ -38,18 +47,27 @@ function stopSound() {
 function pewPew() {
 	playing = true;
 
-	osc.amp(0.5, 0.01);
+	// Calculate ramp duration and frequency based on the number of shots
+	const rampDuration = shotLength / 150;
+	const startFreq = random(100, 200 + desperation * 25); // Low frequency for the start
+	const endFreq = min(startFreq, 500); // High frequency for the end
 
-	osc.freq(800, 0.0);
-	osc.freq(300, 0.2);
+	// Ramp frequency up over the ramp duration
+	osc.freq(startFreq, 0.0); // Start at the low frequency
+	osc.freq(endFreq, rampDuration); // Ramp to the high frequency
+}
 
-	setTimeout(() => {
-		osc.amp(0, 0.2);
-		playing = false;
-	}, 200);
+function doDespair() {
+	desperation = max(desperation / desperationRecovery, 0);
 }
 
 function draw() {
+	if (playing) {
+		doAudio();
+	}
+
+	doDespair();
+
 	if (keyIsPressed) {
 		keyPressed();
 	}
@@ -65,7 +83,7 @@ function drawShots() {
 	for (const shot of shots) {
 		shot.animate();
 
-		if (shot.x > width) {
+		if (shot.x >= width) {
 			shots.shift();
 
 			continue;
@@ -130,6 +148,7 @@ function keyPressed() {
 			recording = true;
 			saveGif("pewpew", 3);
 		}
+		desperation += 1.3;
 		shoot();
 	}
 }
