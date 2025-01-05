@@ -25,9 +25,19 @@ class Entity {
 	}
 }
 
+class Baddy extends Entity {
+	constructor(data) {
+		super(data);
+		this.img = data.img;
+		this.hp = data.hp;
+	}
+}
+
 class Shot extends Entity {
-	constructor(from) {
-		super(from);
+	constructor(data) {
+		super(data);
+
+		this.hostileTo = data.hostileTo;
 
 		// align to gun
 		this.x -= 15;
@@ -83,12 +93,23 @@ class Gun extends Entity {
 	}
 
 	shoot() {
-		this.shots.push(new Shot({ x: gun.x, y: gun.y }));
+		this.shots.push(new Shot({ x: gun.x, y: gun.y, hostileTo: Baddy }));
 		pewPew();
 	}
 }
 
+class Game {
+	constructor(player, boss) {
+		this.boss = boss;
+		this.player = player;
+	}
+}
+
 ////////////////////// CORE p5
+
+function preload() {
+	blade = loadImage("bruh.png");
+}
 
 function setup() {
 	createCanvas(600, 300);
