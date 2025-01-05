@@ -1,4 +1,5 @@
 var gun;
+var game;
 
 const record = false;
 let recording = false;
@@ -22,14 +23,6 @@ class Entity {
 		push();
 		f();
 		pop();
-	}
-}
-
-class Baddy extends Entity {
-	constructor(data) {
-		super(data);
-		this.img = data.img;
-		this.hp = data.hp;
 	}
 }
 
@@ -75,7 +68,6 @@ class Gun extends Entity {
 		this.speed = 16;
 		this.size = 30;
 		this.emoji = "🔫";
-		this.shots = [];
 	}
 
 	move(to) {
@@ -93,29 +85,76 @@ class Gun extends Entity {
 	}
 
 	shoot() {
-		this.shots.push(new Shot({ x: gun.x, y: gun.y, hostileTo: Baddy }));
 		pewPew();
+		return new Shot({ x: this.x, y: this.y, hostileTo: Baddy });
+	}
+}
+
+class Baddy extends Entity {
+	constructor(data) {
+		super(data);
+		this.img = data.img;
+		this.hp = data.hp;
+	}
+
+	render() {
+		image(this.img, this.x, this.y);
 	}
 }
 
 class Game {
-	constructor(player, boss) {
-		this.boss = boss;
+	constructor(player) {
 		this.player = player;
+		this.enemies = [];
+		this.shots = [];
+	}
+
+	spawnBoss(foo) {
+		this.enemies.push(foo);
+	}
+
+	render() {
+		this.player.render();
+		this.drawShots();
+
+		for (const enemy of this.enemies) {
+			enemy.render();
+		}
+	}
+
+	playerAttack() {
+		this.shots.push(this.player.shoot());
+	}
+
+	drawShots() {
+		for (const shot of this.shots) {
+			shot.animate();
+
+			if (shot.x >= width) {
+				this.shots.shift();
+				continue;
+			}
+		}
+	}
+
+	movePlayer(to) {
+		this.player.move(to);
+		this.player.y = min(height - 50, max(50, this.player.y));
+		this.player.x = min(width - 50, max(50, this.player.x));
 	}
 }
 
 ////////////////////// CORE p5
-
+var boss;
 function preload() {
-	blade = loadImage("bruh.png");
+	boss = loadImage("assets/angel/body.png");
 }
 
 function setup() {
 	createCanvas(600, 300);
 
-	shots = [];
-	gun = new Gun({ x: 50, y: height / 2 });
+	game = new Game(new Gun({ x: 50, y: height / 2 }));
+	game.spawnBoss(new Baddy({ x: width - 200, y: 10, img: boss, hp: 1 }));
 
 	this.focus();
 }
@@ -134,30 +173,14 @@ function draw() {
 	background("black");
 
 	drawHelp();
-	drawShots();
-	gun.render();
+
+	game.render();
 }
 
 ////////////////////// MECHANICS
 
 function doDespair() {
 	desperation = max(desperation / desperationRecovery, 0);
-}
-
-function drawShots() {
-	for (const shot of gun.shots) {
-		shot.animate();
-
-		if (shot.x >= width) {
-			gun.shots.shift();
-			continue;
-		}
-	}
-}
-
-function enforceBarriers() {
-	gun.y = min(height - 50, max(50, gun.y));
-	gun.x = min(width - 50, max(50, gun.x));
 }
 
 ////////////////////// HELPERS
@@ -225,7 +248,6 @@ function keyPressed() {
 	// sound has to be activated in response to a user gesture
 	activateSound();
 	checkMoves();
-	enforceBarriers();
 
 	// spacebar
 	if (keyIsDown(32)) {
@@ -234,7 +256,7 @@ function keyPressed() {
 			saveGif("pewpew", 3);
 		}
 		desperation += 1.3;
-		gun.shoot();
+		game.playerAttack();
 	}
 }
 
@@ -261,5 +283,5 @@ function checkMoves() {
 		move.x += 1;
 	}
 
-	gun.move(move);
+	game.movePlayer(move);
 }
