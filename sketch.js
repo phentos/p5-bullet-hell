@@ -1,12 +1,9 @@
-let shots;
-let gunX;
-let gunY;
-let gunSpeed = 16;
+var gun;
 
 const record = false;
 let recording = false;
 
-let osc;
+var osc;
 let playing = false;
 
 let desperation = 0;
@@ -19,6 +16,12 @@ class Entity {
 	constructor(pos) {
 		this.x = pos.x;
 		this.y = pos.y;
+	}
+
+	seal(f) {
+		push();
+		f();
+		pop();
 	}
 }
 
@@ -44,7 +47,7 @@ class Shot extends Entity {
 		const beamWidths = [1, 1, 1, 1, 1, 1, 1, 1, 3, 3, 6, 30];
 		const beamColors = ["orange", "lightgreen", "white"];
 
-		seal(() => {
+		super.seal(() => {
 			let shotColor = random(beamColors);
 			let shotWidth = random(beamWidths);
 
@@ -56,14 +59,43 @@ class Shot extends Entity {
 	}
 }
 
+class Gun extends Entity {
+	constructor(at) {
+		super(at);
+		this.speed = 16;
+		this.size = 30;
+		this.emoji = "🔫";
+		this.shots = [];
+	}
+
+	move(to) {
+		this.x += to.x * this.speed;
+		this.y += to.y * this.speed;
+	}
+
+	render() {
+		super.seal(() => {
+			textSize(this.size);
+			scale(-1, 1);
+			textAlign(CENTER, CENTER);
+			text(this.emoji, -this.x, this.y);
+		});
+	}
+
+	shoot() {
+		this.shots.push(new Shot({ x: gun.x, y: gun.y }));
+		pewPew();
+	}
+}
+
 ////////////////////// CORE p5
 
 function setup() {
 	createCanvas(600, 300);
 
 	shots = [];
-	gunX = 50;
-	gunY = height / 2;
+	gun = new Gun({ x: 50, y: height / 2 });
+
 	this.focus();
 }
 
@@ -82,7 +114,7 @@ function draw() {
 
 	drawHelp();
 	drawShots();
-	drawGun();
+	gun.render();
 }
 
 ////////////////////// MECHANICS
@@ -92,34 +124,19 @@ function doDespair() {
 }
 
 function drawShots() {
-	for (const shot of shots) {
+	for (const shot of gun.shots) {
 		shot.animate();
 
 		if (shot.x >= width) {
-			shots.shift();
-
+			gun.shots.shift();
 			continue;
 		}
 	}
 }
 
-function drawGun() {
-	seal(() => {
-		textSize(30);
-		scale(-1, 1);
-		textAlign(CENTER, CENTER);
-		text("🔫", -gunX, gunY);
-	});
-}
-
 function enforceBarriers() {
-	gunY = min(height - 50, max(50, gunY));
-	gunX = min(width - 50, max(50, gunX));
-}
-
-function shoot() {
-	shots.push(new Shot({ x: gunX, y: gunY }));
-	pewPew();
+	gun.y = min(height - 50, max(50, gun.y));
+	gun.x = min(width - 50, max(50, gun.x));
 }
 
 ////////////////////// HELPERS
@@ -158,14 +175,12 @@ function doAudio() {
 function pewPew() {
 	playing = true;
 
-	// Calculate ramp duration and frequency based on the number of shots
 	const rampDuration = 0.2;
-	const startFreq = random(100, 200 + desperation * 25); // Low frequency for the start
-	const endFreq = min(startFreq, 500); // High frequency for the end
+	const startFreq = random(100, 200 + desperation * 25);
+	const endFreq = min(startFreq, 500);
 
-	// Ramp frequency up over the ramp duration
-	osc.freq(startFreq, 0.0); // Start at the low frequency
-	osc.freq(endFreq, rampDuration); // Ramp to the high frequency
+	osc.freq(startFreq, 0.0);
+	osc.freq(endFreq, rampDuration);
 }
 
 function activateSound() {
@@ -186,37 +201,44 @@ function stopSound() {
 ////////////////////// INPUT
 
 function keyPressed() {
+	// sound has to be activated in response to a user gesture
 	activateSound();
-
-	// w
-	if (keyIsDown(87)) {
-		gunY -= gunSpeed;
-	}
-
-	// a
-	if (keyIsDown(65)) {
-		gunX -= gunSpeed;
-	}
-
-	// s
-	if (keyIsDown(83)) {
-		gunY += gunSpeed;
-	}
-
-	// d
-	if (keyIsDown(68)) {
-		gunX += gunSpeed;
-	}
-
+	checkMoves();
 	enforceBarriers();
 
 	// spacebar
 	if (keyIsDown(32)) {
-		if (!recording & record) {
+		if (record & !recording) {
 			recording = true;
 			saveGif("pewpew", 3);
 		}
 		desperation += 1.3;
-		shoot();
+		gun.shoot();
 	}
+}
+
+function checkMoves() {
+	let move = { x: 0, y: 0 };
+
+	// w
+	if (keyIsDown(87)) {
+		move.y -= 1;
+	}
+
+	// a
+	if (keyIsDown(65)) {
+		move.x -= 1;
+	}
+
+	// s
+	if (keyIsDown(83)) {
+		move.y += 1;
+	}
+
+	// d
+	if (keyIsDown(68)) {
+		move.x += 1;
+	}
+
+	gun.move(move);
 }
