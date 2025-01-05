@@ -2,8 +2,6 @@ let shots;
 let gunX;
 let gunY;
 let gunSpeed = 16;
-let shotLength = 200;
-let shotMode = drawBeam;
 
 const record = false;
 let recording = false;
@@ -15,6 +13,51 @@ let desperation = 0;
 const desperationRate = 1.3;
 const desperationRecovery = 1.1;
 
+////////////////////// CLASSES
+
+class Entity {
+	constructor(pos) {
+		this.x = pos.x;
+		this.y = pos.y;
+	}
+}
+
+class Shot extends Entity {
+	constructor(from) {
+		super(from);
+
+		// align to gun
+		this.x -= 15;
+		this.y -= 2;
+
+		this.speed = 30;
+		this.render = this.drawBeam;
+		this.length = 200;
+	}
+
+	animate() {
+		this.x += this.speed;
+		this.render();
+	}
+
+	drawBeam() {
+		const beamWidths = [1, 1, 1, 1, 1, 1, 1, 1, 3, 3, 6, 30];
+		const beamColors = ["orange", "lightgreen", "white"];
+
+		seal(() => {
+			let shotColor = random(beamColors);
+			let shotWidth = random(beamWidths);
+
+			stroke(shotColor);
+			strokeWeight(shotWidth);
+
+			line(this.x, this.y, this.x + this.length, this.y);
+		});
+	}
+}
+
+////////////////////// CORE p5
+
 function setup() {
 	createCanvas(600, 300);
 
@@ -22,43 +65,6 @@ function setup() {
 	gunX = 50;
 	gunY = height / 2;
 	this.focus();
-}
-
-function doAudio() {
-	let intensity = min(desperation / (5 * desperationRate), 1);
-	osc.amp(intensity);
-}
-
-function activateSound() {
-	if (!osc) {
-		osc = new p5.Oscillator("triangle");
-		osc.amp(0);
-		osc.start();
-	}
-}
-
-function stopSound() {
-	if (osc) {
-		osc.stop();
-		playing = false;
-	}
-}
-
-function pewPew() {
-	playing = true;
-
-	// Calculate ramp duration and frequency based on the number of shots
-	const rampDuration = shotLength / 150;
-	const startFreq = random(100, 200 + desperation * 25); // Low frequency for the start
-	const endFreq = min(startFreq, 500); // High frequency for the end
-
-	// Ramp frequency up over the ramp duration
-	osc.freq(startFreq, 0.0); // Start at the low frequency
-	osc.freq(endFreq, rampDuration); // Ramp to the high frequency
-}
-
-function doDespair() {
-	desperation = max(desperation / desperationRecovery, 0);
 }
 
 function draw() {
@@ -79,6 +85,12 @@ function draw() {
 	drawGun();
 }
 
+////////////////////// MECHANICS
+
+function doDespair() {
+	desperation = max(desperation / desperationRecovery, 0);
+}
+
 function drawShots() {
 	for (const shot of shots) {
 		shot.animate();
@@ -88,24 +100,7 @@ function drawShots() {
 
 			continue;
 		}
-
-		shotMode(shot);
 	}
-}
-
-function drawBeam(shot) {
-	const beamWidths = [1, 1, 1, 1, 1, 1, 1, 1, 3, 3, 6, 30];
-	const beamColors = ["orange", "lightgreen", "white"];
-
-	seal(() => {
-		let shotColor = random(beamColors);
-		let shotWidth = random(beamWidths);
-
-		stroke(shotColor);
-		strokeWeight(shotWidth);
-
-		line(shot.x, shot.y, shot.x + shotLength, shot.y);
-	});
 }
 
 function drawGun() {
@@ -117,7 +112,82 @@ function drawGun() {
 	});
 }
 
+function enforceBarriers() {
+	gunY = min(height - 50, max(50, gunY));
+	gunX = min(width - 50, max(50, gunX));
+}
+
+function shoot() {
+	shots.push(new Shot({ x: gunX, y: gunY }));
+	pewPew();
+}
+
+////////////////////// HELPERS
+
+// wrapper for render atomicity
+function seal(f) {
+	push();
+	f();
+	pop();
+}
+
+////////////////////// UI
+
+function drawHelp() {
+	// let for eventually shooting the letters off...
+	let line1 = "wasd to move";
+	let line2 = "spacebar to shoot";
+	seal(() => {
+		textSize(20);
+		fill("white");
+		textAlign(RIGHT);
+		text(line1, width - 50, height - 30);
+		text(line2, width - 50, height - 50);
+	});
+}
+
+////////////////////// AUDIO
+
+function doAudio() {
+	let a = min(desperation / (30 * desperationRate), 1);
+
+	let intensity = lerp(a, 0, 0.05);
+	osc.amp(intensity);
+}
+
+function pewPew() {
+	playing = true;
+
+	// Calculate ramp duration and frequency based on the number of shots
+	const rampDuration = 0.2;
+	const startFreq = random(100, 200 + desperation * 25); // Low frequency for the start
+	const endFreq = min(startFreq, 500); // High frequency for the end
+
+	// Ramp frequency up over the ramp duration
+	osc.freq(startFreq, 0.0); // Start at the low frequency
+	osc.freq(endFreq, rampDuration); // Ramp to the high frequency
+}
+
+function activateSound() {
+	if (!osc) {
+		osc = new p5.Oscillator("triangle");
+		osc.amp(0);
+		osc.start();
+	}
+}
+
+function stopSound() {
+	if (osc) {
+		osc.stop();
+		playing = false;
+	}
+}
+
+////////////////////// INPUT
+
 function keyPressed() {
+	activateSound();
+
 	// w
 	if (keyIsDown(87)) {
 		gunY -= gunSpeed;
@@ -142,8 +212,6 @@ function keyPressed() {
 
 	// spacebar
 	if (keyIsDown(32)) {
-		activateSound();
-
 		if (!recording & record) {
 			recording = true;
 			saveGif("pewpew", 3);
@@ -151,46 +219,4 @@ function keyPressed() {
 		desperation += 1.3;
 		shoot();
 	}
-}
-
-function enforceBarriers() {
-	gunY = min(height - 50, max(50, gunY));
-	gunX = min(width - 50, max(50, gunX));
-}
-
-function shoot() {
-	shots.push(new Shot({ x: gunX, y: gunY }));
-	pewPew();
-}
-
-class Shot {
-	constructor(from) {
-		this.x = from.x - 15;
-		this.y = from.y - 2;
-		this.speed = 30;
-	}
-
-	animate() {
-		this.x += this.speed;
-	}
-}
-
-// wrapper for render atomicity
-function seal(f) {
-	push();
-	f();
-	pop();
-}
-
-function drawHelp() {
-	// let for eventually shooting the letters off...
-	let line1 = "wasd to move";
-	let line2 = "spacebar to shoot";
-	seal(() => {
-		textSize(20);
-		fill("white");
-		textAlign(RIGHT);
-		text(line1, width - 50, height - 30);
-		text(line2, width - 50, height - 50);
-	});
 }
