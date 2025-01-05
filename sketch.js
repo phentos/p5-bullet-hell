@@ -114,6 +114,9 @@ class Game {
 	}
 
 	render() {
+		background("black");
+		drawHelp();
+
 		this.player.render();
 		this.drawShots();
 
@@ -146,8 +149,9 @@ class Game {
 
 ////////////////////// CORE p5
 var boss;
+
 function preload() {
-	boss = loadImage("assets/angel/body.png");
+	boss = loadImage("assets/angel/PNG/low_res/angel.png");
 }
 
 function setup() {
@@ -169,10 +173,6 @@ function draw() {
 	if (keyIsPressed) {
 		keyPressed();
 	}
-
-	background("black");
-
-	drawHelp();
 
 	game.render();
 }
