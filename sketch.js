@@ -95,10 +95,35 @@ class Baddy extends Entity {
 		super(data);
 		this.img = data.img;
 		this.hp = data.hp;
+
+		this.ouchTints = data.ouchTints;
+		this.ouchFrames = 0;
 	}
 
 	render() {
-		image(this.img, this.x, this.y);
+		super.seal(() => {
+			if (this.hp === 0) {
+				this.die();
+			} else {
+				if (this.ouchFrames > 0) {
+					this.ouch();
+				}
+				image(this.img, this.x, this.y);
+			}
+		});
+	}
+
+	die() {}
+
+	damage(data) {
+		this.ouchFrames = frameRate() * 1;
+		this.ouch();
+		this.hp -= data.hpLoss;
+	}
+
+	ouch() {
+		tint(random(this.ouchTints));
+		this.ouchFrames -= 1;
 	}
 }
 
@@ -127,6 +152,9 @@ class Game {
 
 	playerAttack() {
 		this.shots.push(this.player.shoot());
+		this.enemies.at(0).damage({
+			hpLoss: 0,
+		});
 	}
 
 	drawShots() {
@@ -148,17 +176,31 @@ class Game {
 }
 
 ////////////////////// CORE p5
-var boss;
+var bossAngel;
 
 function preload() {
-	boss = loadImage("assets/angel/PNG/low_res/angel.png");
+	bossAngel = loadImage("assets/angel/PNG/low_res/angel.png");
 }
 
 function setup() {
 	createCanvas(600, 300);
 
-	game = new Game(new Gun({ x: 50, y: height / 2 }));
-	game.spawnBoss(new Baddy({ x: width - 200, y: 10, img: boss, hp: 1 }));
+	game = new Game(
+		new Gun({
+			x: 50,
+			y: height / 2,
+		})
+	);
+
+	game.spawnBoss(
+		new Baddy({
+			x: width - 200,
+			y: 10,
+			img: bossAngel,
+			hp: 1,
+			ouchTints: ["white", "maroon", "gray"],
+		})
+	);
 
 	this.focus();
 }
