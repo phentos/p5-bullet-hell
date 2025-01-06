@@ -107,6 +107,8 @@ class Baddy extends Entity {
 			} else {
 				if (this.ouchFrames > 0) {
 					this.ouch();
+				} else {
+					noTint();
 				}
 				image(this.img, this.x, this.y);
 			}
