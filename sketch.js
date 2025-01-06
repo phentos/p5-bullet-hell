@@ -145,11 +145,14 @@ class Game {
 		drawHelp();
 
 		this.player.render();
-		this.drawShots();
 
+		let [aboveShots, belowShots] = randomSplit(this.shots);
+
+		this.drawShots(belowShots);
 		for (const enemy of this.enemies) {
 			enemy.render();
 		}
+		this.drawShots(aboveShots);
 	}
 
 	playerAttack() {
@@ -228,6 +231,20 @@ function doDespair() {
 }
 
 ////////////////////// HELPERS
+
+function randomSplit(arr) {
+	let l = [];
+	let r = [];
+	for (const e of arr) {
+		if (random() < 0.5) {
+			l.push(e);
+		} else {
+			r.push(e);
+		}
+	}
+
+	return [l, r];
+}
 
 // wrapper for render atomicity
 function seal(f) {
